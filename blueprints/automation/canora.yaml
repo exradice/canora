@@ -1,0 +1,84 @@
+blueprint:
+  name: Canora - karaoke on your AWTRIX clock
+  description: >-
+    Publishes the song that is playing on your speakers, with its playback position, to the
+    **Canora** script on an AWTRIX NG clock. The clock fetches the synced lyrics itself and shows
+    them in time with the music.
+
+
+    Pick the speakers whose music should be sung along to. The first one that is playing wins.
+    Optionally pick an `input_boolean` as an on/off switch; without one, Canora is always on.
+
+
+    Setup guide and troubleshooting: https://github.com/exradice/canora
+  domain: automation
+  author: exradice
+  source_url: https://github.com/exradice/canora/blob/main/blueprints/automation/canora.yaml
+  homeassistant:
+    min_version: "2024.10.0"
+  input:
+    media_players:
+      name: Speakers
+      description: >-
+        Media players to follow. They must report the playback position
+        (`media_position`), which Google Cast speakers do. Add speaker groups too.
+      selector:
+        entity:
+          domain: media_player
+          multiple: true
+    enable_switch:
+      name: On/off switch (optional)
+      description: >-
+        An `input_boolean` that turns Canora on and off, e.g. by voice. Leave empty to keep
+        Canora always on.
+      default: ""
+      selector:
+        entity:
+          domain: input_boolean
+    topic:
+      name: MQTT topic
+      description: Must match the "MQTT topic" setting of the Canora script on the clock.
+      default: awtrix/data/canora
+      selector:
+        text:
+
+mode: queued
+max: 10
+max_exceeded: silent
+
+variables:
+  players: !input media_players
+  switch: !input enable_switch
+  topic: !input topic
+  player: "{{ players | select('is_state', 'playing') | first | default(players | first) }}"
+
+triggers:
+  # Without "to:" this also fires on track changes, pause and seeking (attribute changes)
+  - trigger: state
+    entity_id: !input media_players
+  # An event trigger, so an empty switch input stays valid: it then simply never matches
+  - trigger: event
+    event_type: state_changed
+    event_data:
+      entity_id: !input enable_switch
+  - trigger: homeassistant
+    event: start
+
+actions:
+  - action: mqtt.publish
+    data:
+      topic: "{{ topic }}"
+      retain: true
+      payload: >-
+        {% set ts = state_attr(player, 'media_position_updated_at') %}
+        {{ {
+          'enabled': switch == '' or is_state(switch, 'on'),
+          'state': states(player),
+          'id': state_attr(player, 'media_content_id') or '',
+          'artist': state_attr(player, 'media_artist') or '',
+          'title': state_attr(player, 'media_title') or '',
+          'album': state_attr(player, 'media_album_name') or '',
+          'duration': ((state_attr(player, 'media_duration') or 0) * 1000) | int,
+          'position': ((state_attr(player, 'media_position') or 0) * 1000) | int,
+          'position_ts': (as_timestamp(ts, 0) * 1000) | int
+        } | to_json }}
