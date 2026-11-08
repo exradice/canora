@@ -19,8 +19,9 @@ until the next song.
 
 ### What you need
 
-- **Home Assistant** with MQTT, and a speaker that reports its playback position (Google Cast
-  speakers do, also with Spotify).
+- **Home Assistant** with MQTT and any media player that shows artist, title and song length:
+  Google Cast, Sonos, Music Assistant, Spotify and more. Exact timing where the player reports
+  its playback position, an approximate mode otherwise.
 - The free **blueprint** that sends the track to the clock. Setup guide, blueprint import button
   and troubleshooting: **https://github.com/exradice/canora**
 

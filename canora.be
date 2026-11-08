@@ -12,7 +12,8 @@
 # Canora - https://github.com/exradice/canora
 # Copyright (c) 2026 exradice. MIT License.
 #
-# Expected message (retained), times in milliseconds, pos_ts since 1970 (UTC):
+# Expected message (retained), times in milliseconds, position_ts since 1970 (UTC).
+# Without position_ts (0 or missing) the script counts from when the song first arrives:
 # {"enabled": true, "state": "playing", "id": "spotify:track:...", "artist": "...", "title": "...",
 #  "album": "...", "duration": 180000, "position": 4598, "position_ts": 1793087239732}
 #
@@ -52,6 +53,11 @@ class Canora
     self.reset()
   end
 
+  # A number from JSON, 0 for null or anything else
+  def num(v)
+    return type(v) == 'int' || type(v) == 'real' ? int(v) : 0
+  end
+
   def cfg(key, default)
     var v = nil
     try v = store.get(key) except .. end
@@ -73,17 +79,31 @@ class Canora
         self.state = str(d.find('state', ""))
         self.artist = str(d.find('artist', ""))
         self.title = str(d.find('title', ""))
-        self.duration = int(d.find('duration', 0))
-        self.position = int(d.find('position', 0))
-        self.position_ts = int(d.find('position_ts', 0))
+        self.duration = self.num(d.find('duration'))
         var song = str(d.find('id', ""))
         if song == "" song = self.artist + "|" + self.title end
-        if song != self.song
+        var is_new = song != self.song
+        var ts = self.num(d.find('position_ts'))
+        if ts > 0
+          self.position = self.num(d.find('position'))
+          self.position_ts = ts
+        elif is_new || self.position_ts <= 0
+          # The player reports no position: count from the moment the song shows up here.
+          # Pausing then shifts the lyrics, the README calls this the approximate mode.
+          self.position = 0
+          self.position_ts = epoch_ms() >= 0 ? epoch_ms() : 0
+        end
+        if is_new
           self.song = song
           self.reset()
-          if self.enabled && self.title != "" self.load() end
-        elif self.enabled && self.lyr == "" && self.title != ""
-          self.load()
+        end
+        # Without a duration (live radio, for example) a lookup would only find a wrong match
+        if self.enabled && self.lyr == "" && self.title != ""
+          if self.duration > 0
+            self.load()
+          elif is_new
+            log("Canora: " + self.title + ": no duration, skipped (live stream?)")
+          end
         end
       end
     except ..

@@ -20,8 +20,9 @@ blueprint:
     media_players:
       name: Speakers
       description: >-
-        Media players to follow. They must report the playback position
-        (`media_position`), which Google Cast speakers do. Add speaker groups too.
+        Media players to follow, from any integration: Google Cast, Sonos, Music Assistant,
+        Spotify and more. Players that report the playback position (`media_position`) give
+        exact timing; others work in an approximate mode. Add speaker groups too.
       selector:
         entity:
           domain: media_player
@@ -41,6 +42,14 @@ blueprint:
       default: awtrix/data/canora
       selector:
         text:
+    music_only:
+      name: Music only
+      description: >-
+        Ignore videos, TV shows and podcasts, so a YouTube video or a movie does not start a
+        lyrics lookup. Players that do not tell what they play count as music.
+      default: true
+      selector:
+        boolean:
 
 mode: queued
 max: 10
@@ -50,6 +59,7 @@ variables:
   players: !input media_players
   switch: !input enable_switch
   topic: !input topic
+  music_only: !input music_only
   player: "{{ players | select('is_state', 'playing') | first | default(players | first) }}"
 
 triggers:
@@ -64,21 +74,42 @@ triggers:
   - trigger: homeassistant
     event: start
 
+conditions:
+  # Players also change attributes for volume, artwork or sources. Only what Canora uses counts,
+  # so the clock is not flooded by integrations that update often.
+  - condition: template
+    value_template: >-
+      {% if trigger.platform != 'state' or trigger.from_state is none or trigger.to_state is none %}
+        true
+      {% else %}
+        {% set a = trigger.from_state %}
+        {% set b = trigger.to_state %}
+        {% set ns = namespace(changed = a.state != b.state) %}
+        {% for k in ['media_title', 'media_artist', 'media_content_id', 'media_content_type',
+                     'media_duration', 'media_position', 'media_position_updated_at'] %}
+          {% if a.attributes.get(k) != b.attributes.get(k) %}{% set ns.changed = true %}{% endif %}
+        {% endfor %}
+        {{ ns.changed }}
+      {% endif %}
+
 actions:
   - action: mqtt.publish
     data:
       topic: "{{ topic }}"
       retain: true
       payload: >-
+        {% set pos = state_attr(player, 'media_position') %}
         {% set ts = state_attr(player, 'media_position_updated_at') %}
+        {% set kind = state_attr(player, 'media_content_type') %}
+        {% set is_music = kind in [none, '', 'music', 'track'] or not music_only %}
         {{ {
           'enabled': switch == '' or is_state(switch, 'on'),
-          'state': states(player),
+          'state': states(player) if is_music else 'idle',
           'id': state_attr(player, 'media_content_id') or '',
           'artist': state_attr(player, 'media_artist') or '',
           'title': state_attr(player, 'media_title') or '',
           'album': state_attr(player, 'media_album_name') or '',
           'duration': ((state_attr(player, 'media_duration') or 0) * 1000) | int,
-          'position': ((state_attr(player, 'media_position') or 0) * 1000) | int,
-          'position_ts': (as_timestamp(ts, 0) * 1000) | int
+          'position': ((pos or 0) * 1000) | int,
+          'position_ts': 0 if pos is none else (as_timestamp(ts, 0) * 1000) | int
         } | to_json }}
