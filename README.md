@@ -203,9 +203,18 @@ up the lyrics. Nothing else leaves your network, and nothing is stored on the cl
 
 ## Support
 
-Canora is free and stays free. If it brings karaoke to your kitchen and you want to say thanks,
-you can [buy me a coffee on Ko-fi](https://ko-fi.com/exradice). Bug reports and ideas are
-welcome as GitHub issues.
+Canora is free and stays free. If it brings karaoke to your kitchen and you want to say thanks:
+
+- **Support LRCLIB first.** Canora is a small script; the heavy lifting is done by
+  [LRCLIB](https://lrclib.net), a free database of synced lyrics with an open API, run by one
+  developer and filled by its community. Without it there would be nothing to sing along to.
+  You can sponsor it on [GitHub Sponsors](https://github.com/sponsors/tranxuanthang) (the way its
+  developer recommends) or see the other options in the
+  [LRCLIB README](https://github.com/tranxuanthang/lrclib#donation). Adding or fixing synced
+  lyrics on [lrclib.net](https://lrclib.net) helps just as much.
+- **Support Canora** with a [coffee on Ko-fi](https://ko-fi.com/exradice).
+
+Bug reports and ideas are welcome as GitHub issues.
 
 ## License
 

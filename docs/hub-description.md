@@ -37,5 +37,7 @@ until the next song.
 
 - Lyrics come live from [LRCLIB](https://lrclib.net), a free community database. Missing a song?
   Add it there. The script sends artist, title and duration to lrclib.net; nothing is stored.
+- LRCLIB does the heavy lifting and is run by a single developer. If you enjoy Canora, consider
+  supporting LRCLIB: https://github.com/sponsors/tranxuanthang
 - Words inside a line are timed by an estimate, because LRCLIB has one timestamp per line.
 - Made for the 52×16 display (Ulanzi TC002).
