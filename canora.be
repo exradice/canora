@@ -3,7 +3,8 @@
 # @author  exradice
 # @version 1.0.0
 # @display 52x16
-# @config topic         text   "MQTT topic"             default="awtrix/data/canora" help="Where Home Assistant publishes the track and position, see the README"
+# @config prefix        text   "MQTT prefix of this clock" default="" help="Required. The same prefix as in this clock's MQTT settings, e.g. awtrix. Canora listens on <prefix>/data/canora."
+# @config topic         text   "Custom topic (optional)" default="" help="Only to listen somewhere other than <prefix>/data/canora"
 # @config offset        number "Offset"                 default=0 min=-3000 max=3000 unit=ms help="Positive values show the lyrics earlier, to make up for speaker delay"
 # @config color_pending color  "Not yet sung"           default=#A0A0A0 group="Colors"
 # @config color_sung    color  "Sung"                   default=#FFB000 group="Colors"
@@ -64,10 +65,21 @@ class Canora
     return v != nil ? v : default
   end
 
+  # The clock's own MQTT prefix is not readable from a script, so it is a setting
+  def topic()
+    var custom = str(self.cfg("topic", ""))
+    if size(custom) > 0 return custom end
+    var prefix = str(self.cfg("prefix", ""))
+    return size(prefix) > 0 ? prefix + "/data/canora" : ""
+  end
+
   def setup()
-    var topic = str(self.cfg("topic", "awtrix/data/canora"))
+    var topic = self.topic()
     if size(topic) > 0
       mqtt.subscribe(topic, / t, payload -> self.on_data(payload))
+      log("Canora: listening on " + topic)
+    else
+      log("Canora: set the MQTT prefix of this clock in the app settings")
     end
   end
 
@@ -461,7 +473,8 @@ class Canora
     var t = self.pos_ms()
     if self.lyr != "ok" || t == nil
       # Only visible via "Show": without lyrics the rotation skips the app
-      var hint = self.lyr == "loading" ? "loading" : (self.lyr == "none" ? "no lyrics" : "Canora")
+      var hint = self.lyr == "loading" ? "loading" : (self.lyr == "none" ? "no lyrics" :
+                 (size(self.topic()) == 0 ? "set prefix" : "Canora"))
       text((width() - text_ink_width(hint)) / 2, 10, hint, 0x808080)
       return
     end

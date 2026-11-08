@@ -13,8 +13,9 @@ First public release.
 - Instrumental parts show the song title, the last three seconds a countdown of dots.
 - Holds the app rotation while a song with lyrics plays; a button press hands the display back
   until the next song.
-- Home Assistant blueprint for any media player integration, any number of speakers and an
-  optional on/off switch. It only publishes when something Canora uses changes, and can ignore
+- Home Assistant blueprint for any media player integration, any number of speakers and clocks,
+  and an optional on/off switch. It finds each clock's topic `<prefix>/data/canora` from the
+  clock's MQTT prefix sensor, so no topic is typed by hand. It only publishes when something Canora uses changes, and can ignore
   videos, TV shows and podcasts ("Music only").
 - Approximate mode for players without a playback position; songs without a duration (live
   streams) are skipped instead of matched wrongly.

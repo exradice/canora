@@ -27,7 +27,9 @@ until the next song.
 
 ### Settings
 
-- **MQTT topic:** where the blueprint publishes, `awtrix/data/canora` by default.
+- **MQTT prefix of this clock** (required): the prefix from the clock's MQTT settings. Canora
+  listens on `<prefix>/data/canora`, and the blueprint finds the same topic from the clock's
+  *MQTT prefix* sensor in Home Assistant.
 - **Offset:** positive values show the lyrics earlier, to make up for speaker delay.
 - **Colors** for sung and not yet sung words and for the title.
 

@@ -27,7 +27,8 @@ Any media player  ──>  Home Assistant  ──MQTT──>  AWTRIX clock  ─�
 
 ## Requirements
 
-- **An AWTRIX NG clock with a 52×16 display** (Ulanzi TC002), connected to your MQTT broker.
+- **An AWTRIX NG clock with a 52×16 display** (Ulanzi TC002), connected to your MQTT broker,
+  with *Home Assistant discovery* switched on in its MQTT settings.
 - **Home Assistant** with the **MQTT integration**, using the same broker as the clock.
 - **A media player in Home Assistant** that shows artist, title and duration while music plays.
   See [Which players work](#which-players-work).
@@ -64,18 +65,57 @@ Good to know:
 
 ## Setup
 
+### How Home Assistant and the clock find each other
+
+Every AWTRIX clock has an **MQTT prefix**: the first part of all its topics, set in the clock's
+MQTT settings (for example `awtrix` or `kitchen`). Canora uses the topic
+
+```
+<prefix>/data/canora        for example  kitchen/data/canora
+```
+
+Both sides build this topic from the same prefix, so you never type a topic yourself:
+
+- **On the clock** you enter the prefix once in Canora's settings. A script cannot read the
+  clock's own prefix, which is why this one field is needed.
+- **In Home Assistant** you pick the clock's **MQTT prefix** sensor in the blueprint, and the
+  blueprint reads the prefix from it. AWTRIX creates this sensor when *Home Assistant discovery*
+  is on in the clock's MQTT settings; it is called something like
+  `sensor.<clock name>_mqtt_prefix` and shows the prefix as its state.
+
+The topic sits under the clock's own prefix on purpose: if your broker only lets the clock read
+its own topics (an ACL such as `topic read kitchen/#`), Canora still works without changes.
+
+### Steps
+
 1. **Install the script.** Get *Canora* from the AWTRIX Hub, or create a script named `Canora` in
    the clock's web interface (*Scripts* tab) and paste [`canora.be`](canora.be).
-2. **Optional: create an on/off switch.** In Home Assistant: *Settings → Devices & services →
+2. **Enter the prefix.** *Apps* tab → gear icon of Canora → **MQTT prefix of this clock**: the
+   same value as in the clock's MQTT settings. Not sure? In Home Assistant, the clock's *MQTT
+   prefix* sensor shows it. The clock's log then says `Canora: listening on <prefix>/data/canora`.
+3. **Optional: create an on/off switch.** In Home Assistant: *Settings → Devices & services →
    Helpers → Create helper → Toggle*, for example named `Karaoke`. Expose it to your voice
    assistant to say "turn on karaoke".
-3. **Import the blueprint** with the button above, then *Create automation*: pick your speakers,
-   the switch (if you made one), and keep the MQTT topic unless you changed it in step 4.
-4. **Check the topic.** The script listens on `awtrix/data/canora` by default (*Apps* tab → gear
-   icon of Canora). If you change it, use the same topic in the blueprint.
-5. **Only if you use a fixed app order:** add `Canora` to it (for example in your
-   `<prefix>/cmd/apps/order` message). A script that is not in the rotation cannot take over the
-   display, and Canora then never shows up.
+4. **Import the blueprint** with the button above (or *Settings → Automations & scenes →
+   Blueprints → Import blueprint* and paste
+   `https://github.com/exradice/canora/blob/main/blueprints/automation/canora.yaml`). Then
+   *Create automation* and pick:
+   - **Clocks:** the *MQTT prefix* sensor of each clock running Canora
+   - **Speakers:** the media players to follow
+   - **On/off switch:** the toggle from step 3, if you made one
+5. **Check the app order** (only if you set a fixed one). AWTRIX shows only the apps listed in
+   `order`, and a script that is not in the rotation cannot take over the display. Add `Canora`
+   to your list, keeping all your other apps, for example over MQTT:
+
+   ```
+   topic:   <prefix>/cmd/apps/order
+   payload: {"order":["Time","Canora","Date"],"disabled":["Battery"]}
+   ```
+
+   `disabled` is required and lists the apps that are switched off. If you publish your order as
+   a retained message (for example from an automation), add Canora there, otherwise the old list
+   comes back on the next reconnect. Without a fixed order, new scripts join the rotation by
+   themselves and you can skip this step.
 
 Play a song. A second or two after it starts, the clock switches to the lyrics.
 
@@ -85,7 +125,8 @@ In the clock's web interface, *Apps* tab, gear icon of Canora:
 
 | Setting | Default | What it does |
 |---|---|---|
-| MQTT topic | `awtrix/data/canora` | Where the blueprint publishes |
+| MQTT prefix of this clock | *(empty, required)* | The clock's MQTT prefix; Canora listens on `<prefix>/data/canora` |
+| Custom topic | *(empty)* | Only if you publish somewhere else, for example without Home Assistant |
 | Offset | 0 ms | Positive values show the lyrics earlier, to make up for speaker delay |
 | Not yet sung / Sung | grey / amber | Colors of the words before and after they are sung |
 | Title during intros and solos | dark grey | Color of the song title in instrumental parts |
@@ -98,19 +139,23 @@ In the clock's web interface, *Apps* tab, gear icon of Canora:
     You can add them yourself at [lrclib.net](https://lrclib.net) and help everyone.
   - `status 503`: LRCLIB often answers the first request for a song this way. Canora tries again
     after 2 and 4 seconds.
-- **No log line at all:** the clock receives no data. Check that the blueprint automation runs
-  (its traces) and that blueprint and script use the same topic. Is the switch on?
+- **`Canora: set the MQTT prefix of this clock`** in the log: setup step 2 is missing.
+- **No lookup line at all:** the clock receives no data.
+  - Does the log say `listening on kitchen/data/canora` with *your* prefix?
+  - Does the blueprint automation run, and does its trace show a publish to the same topic?
+  - Is the on/off switch on?
+  - If you use a custom topic: can the clock's MQTT user read it?
 - **`no duration, skipped (live stream?)`:** the player reports no song length, see
   [Which players work](#which-players-work).
 - **Lyrics run ahead or behind:** adjust the *Offset*. Words inside a line are timed by an
   estimate, because LRCLIB only has a timestamp per line.
-- **The clock shows Canora briefly but then moves on:** Canora is missing from your fixed app
-  order (setup step 5).
+- **The lyrics load (log says `ok`) but the clock never switches to them:** Canora is missing
+  from your fixed app order (setup step 5).
 
 ## MQTT interface
 
-You do not need Home Assistant: anything that publishes this JSON (retained) to the topic works,
-for example Node-RED.
+You do not need Home Assistant: anything that publishes this JSON (retained) to
+`<prefix>/data/canora` (or your custom topic) works, for example Node-RED.
 
 ```json
 {
