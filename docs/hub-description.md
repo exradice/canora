@@ -27,10 +27,10 @@ until the next song.
 
 ### Settings
 
-- **MQTT prefix of this clock** (required): the prefix from the clock's MQTT settings. Canora
-  listens on `<prefix>/data/canora`, and the blueprint finds the same topic from the clock's
-  *MQTT prefix* sensor in Home Assistant.
-- **Offset:** positive values show the lyrics earlier, to make up for speaker delay.
+- **Topic prefix of this clock** (required): copy the *Topic prefix* from the clock's MQTT
+  settings. Canora receives the music on `<prefix>/data/canora`; the blueprint finds the same
+  topic from the clock's *MQTT prefix* sensor in Home Assistant.
+- **Lyrics offset:** if the words light up too late, a positive value (300 = 0.3 s earlier).
 - **Colors** for sung and not yet sung words and for the title.
 
 ### Good to know

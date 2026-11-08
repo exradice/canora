@@ -5,7 +5,9 @@ with the music: the words light up as they are sung, and the next words are alwa
 
 *Canora* comes from the Latin *canorus*, "melodious, singing".
 
-<!-- Demo: docs/canora.gif - recorded with a public-domain song, see "Legal" below -->
+<p align="center"><img src="docs/canora.gif" alt="Canora showing the lyrics of the sea shanty Wellerman on a 52×16 LED clock, words lighting up in amber as they are sung" width="652"></p>
+
+<p align="center"><sub>Simulated with the clock's own pixel font. Lyrics: <i>Wellerman</i>, traditional (public domain).</sub></p>
 
 [![Import blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fexradice%2Fcanora%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fcanora.yaml)
 [![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-support-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/exradice)
@@ -28,7 +30,7 @@ Any media player  ──>  Home Assistant  ──MQTT──>  AWTRIX clock  ─�
 ## Requirements
 
 - **An AWTRIX NG clock with a 52×16 display** (Ulanzi TC002), connected to your MQTT broker,
-  with *Home Assistant discovery* switched on in its MQTT settings.
+  with *HA discovery* switched on in its MQTT settings.
 - **Home Assistant** with the **MQTT integration**, using the same broker as the clock.
 - **A media player in Home Assistant** that shows artist, title and duration while music plays.
   See [Which players work](#which-players-work).
@@ -67,8 +69,8 @@ Good to know:
 
 ### How Home Assistant and the clock find each other
 
-Every AWTRIX clock has an **MQTT prefix**: the first part of all its topics, set in the clock's
-MQTT settings (for example `awtrix` or `kitchen`). Canora uses the topic
+Every AWTRIX clock has an **MQTT prefix**: the first part of all its topics, set in the field
+*Topic prefix* of the clock's MQTT settings (for example `awtrix` or `kitchen`). Canora uses the topic
 
 ```
 <prefix>/data/canora        for example  kitchen/data/canora
@@ -79,8 +81,8 @@ Both sides build this topic from the same prefix, so you never type a topic your
 - **On the clock** you enter the prefix once in Canora's settings. A script cannot read the
   clock's own prefix, which is why this one field is needed.
 - **In Home Assistant** you pick the clock's **MQTT prefix** sensor in the blueprint, and the
-  blueprint reads the prefix from it. AWTRIX creates this sensor when *Home Assistant discovery*
-  is on in the clock's MQTT settings; it is called something like
+  blueprint reads the prefix from it. AWTRIX creates this sensor when *HA discovery* is on in the
+  clock's MQTT settings; it is called something like
   `sensor.<clock name>_mqtt_prefix` and shows the prefix as its state.
 
 The topic sits under the clock's own prefix on purpose: if your broker only lets the clock read
@@ -90,9 +92,11 @@ its own topics (an ACL such as `topic read kitchen/#`), Canora still works witho
 
 1. **Install the script.** Get *Canora* from the AWTRIX Hub, or create a script named `Canora` in
    the clock's web interface (*Scripts* tab) and paste [`canora.be`](canora.be).
-2. **Enter the prefix.** *Apps* tab → gear icon of Canora → **MQTT prefix of this clock**: the
-   same value as in the clock's MQTT settings. Not sure? In Home Assistant, the clock's *MQTT
-   prefix* sensor shows it. The clock's log then says `Canora: listening on <prefix>/data/canora`.
+2. **Enter the prefix.** *Apps* tab → gear icon of Canora → **Topic prefix of this clock**: copy
+   the value of the field *Topic prefix* in the clock's MQTT settings. Not sure? In Home
+   Assistant, the clock's *MQTT prefix* sensor shows it. If the field is empty on the clock, AWTRIX
+   uses its device ID instead, and the sensor shows that. The clock's log then says
+   `Canora: listening on <prefix>/data/canora`.
 3. **Optional: create an on/off switch.** In Home Assistant: *Settings → Devices & services →
    Helpers → Create helper → Toggle*, for example named `Karaoke`. Expose it to your voice
    assistant to say "turn on karaoke".
@@ -125,11 +129,11 @@ In the clock's web interface, *Apps* tab, gear icon of Canora:
 
 | Setting | Default | What it does |
 |---|---|---|
-| MQTT prefix of this clock | *(empty, required)* | The clock's MQTT prefix; Canora listens on `<prefix>/data/canora` |
-| Custom topic | *(empty)* | Only if you publish somewhere else, for example without Home Assistant |
-| Offset | 0 ms | Positive values show the lyrics earlier, to make up for speaker delay |
-| Not yet sung / Sung | grey / amber | Colors of the words before and after they are sung |
-| Title during intros and solos | dark grey | Color of the song title in instrumental parts |
+| Topic prefix of this clock | *(empty, required)* | The clock's MQTT prefix; Canora receives the music on `<prefix>/data/canora` |
+| Lyrics offset | 0 ms | Words light up too late: positive value (300 = 0.3 s earlier). Too early: negative |
+| Words still to sing / already sung | grey / amber | Colors of the words before and after they are sung |
+| Song title in intros and solos | dark grey | Color of the title while nobody sings |
+| Own topic instead of the prefix | *(empty)* | *Advanced.* Only if you publish to a different topic yourself, e.g. without Home Assistant |
 
 ## Troubleshooting
 
@@ -139,7 +143,7 @@ In the clock's web interface, *Apps* tab, gear icon of Canora:
     You can add them yourself at [lrclib.net](https://lrclib.net) and help everyone.
   - `status 503`: LRCLIB often answers the first request for a song this way. Canora tries again
     after 2 and 4 seconds.
-- **`Canora: set the MQTT prefix of this clock`** in the log: setup step 2 is missing.
+- **`Canora: enter the topic prefix of this clock`** in the log: setup step 2 is missing.
 - **No lookup line at all:** the clock receives no data.
   - Does the log say `listening on kitchen/data/canora` with *your* prefix?
   - Does the blueprint automation run, and does its trace show a publish to the same topic?

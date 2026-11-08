@@ -3,12 +3,12 @@
 # @author  exradice
 # @version 1.0.0
 # @display 52x16
-# @config prefix        text   "MQTT prefix of this clock" default="" help="Required. The same prefix as in this clock's MQTT settings, e.g. awtrix. Canora listens on <prefix>/data/canora."
-# @config topic         text   "Custom topic (optional)" default="" help="Only to listen somewhere other than <prefix>/data/canora"
-# @config offset        number "Offset"                 default=0 min=-3000 max=3000 unit=ms help="Positive values show the lyrics earlier, to make up for speaker delay"
-# @config color_pending color  "Not yet sung"           default=#A0A0A0 group="Colors"
-# @config color_sung    color  "Sung"                   default=#FFB000 group="Colors"
-# @config color_title   color  "Title during intros and solos" default=#484848 group="Colors"
+# @config prefix        text   "Topic prefix of this clock" default="" help="Required. Copy the 'Topic prefix' from this clock's MQTT settings, for example kitchen. Home Assistant shows it as the clock's 'MQTT prefix' sensor. Canora then receives the music on kitchen/data/canora."
+# @config offset        number "Lyrics offset"          default=0 min=-3000 max=3000 unit=ms help="If the words light up too late, enter a positive value (300 = 0.3 s earlier); if too early, a negative one."
+# @config color_pending color  "Words still to sing"    default=#A0A0A0 group="Colors"
+# @config color_sung    color  "Words already sung"     default=#FFB000 group="Colors"
+# @config color_title   color  "Song title in intros and solos" default=#484848 group="Colors"
+# @config topic         text   "Own topic instead of the prefix" default="" group="Advanced" help="Leave empty. Only if you send the data yourself to a different topic, for example without Home Assistant."
 
 # Canora - https://github.com/exradice/canora
 # Copyright (c) 2026 exradice. MIT License.
@@ -79,7 +79,7 @@ class Canora
       mqtt.subscribe(topic, / t, payload -> self.on_data(payload))
       log("Canora: listening on " + topic)
     else
-      log("Canora: set the MQTT prefix of this clock in the app settings")
+      log("Canora: enter the topic prefix of this clock in the app settings")
     end
   end
 
