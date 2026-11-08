@@ -1,26 +1,38 @@
 """Renders docs/canora.gif: same layout logic as canora.be, AWTRIX panel font, LED look.
 
-Usage: python3 render-demo.py awtrix.bdf canora.gif
+Usage: python3 render-demo.py awtrix.bdf canora.gif [short]
+"short" renders the 10-second version (canora-short.gif) for the AWTRIX Hub.
 The font is assets/fonts/awtrix.bdf from https://github.com/Blueforcer/awtrix-ng (OFL-1.1).
 """
 import sys
 from PIL import Image, ImageDraw
 
 FONT, OUT = sys.argv[1], sys.argv[2]
+SHORT = len(sys.argv) > 3 and sys.argv[3] == "short"
 W, H = 52, 16
 SUNG, PENDING, TITLE_C = (0xFF, 0xB0, 0x00), (0xA0, 0xA0, 0xA0), (0x48, 0x48, 0x48)
 TITLE = "Wellerman"
 
 # Traditional sea shanty (19th century), public domain. Timestamps written for this demo.
-LRC = [
-    (0, ""),
-    (5500, "There once was a ship that put to sea"),
-    (8900, "The name of the ship was the Billy o' Tea"),
-    (12300, "The winds blew up, her bow dipped down"),
-    (15700, "O blow, my bully boys, blow"),
-    (19100, ""),
-]
-LENGTH_MS, FPS = 21500, 15
+if SHORT:
+    # Countdown, two lines, title again: under 10 s, loops seamlessly
+    LRC = [
+        (0, ""),
+        (3200, "There once was a ship that put to sea"),
+        (6200, "The name of the ship was the Billy o' Tea"),
+        (9200, ""),
+    ]
+    LENGTH_MS, FPS = 9900, 15
+else:
+    LRC = [
+        (0, ""),
+        (5500, "There once was a ship that put to sea"),
+        (8900, "The name of the ship was the Billy o' Tea"),
+        (12300, "The winds blew up, her bow dipped down"),
+        (15700, "O blow, my bully boys, blow"),
+        (19100, ""),
+    ]
+    LENGTH_MS, FPS = 21500, 15
 
 
 def load_bdf(path):
